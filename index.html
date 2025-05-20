@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Alarm Clock</title>
+    <link rel="manifest" href="manifest.json" />
+    <meta name="theme-color" content="#111827" />
+    <link rel="icon" href="icon.png" />
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body
+    class="bg-gray-900 text-white flex flex-col items-center justify-center min-h-screen p-4"
+  >
+    <h1 class="text-3xl font-bold mb-4 text-center">Alarm Clock</h1>
+
+    <label class="mb-2 w-full text-center">Set Alarm Time:</label>
+    <input
+      type="time"
+      id="alarmTime"
+      class="text-black p-2 rounded mb-4 w-full max-w-xs"
+    />
+
+    <label class="mb-2 w-full text-center">Custom Voice Message:</label>
+    <input
+      type="text"
+      id="voiceMessage"
+      class="text-black p-2 rounded mb-4 w-full max-w-xs"
+      value="Rise and shine!"
+    />
+
+    <label class="mb-2 w-full text-center">Repeat Alarm Daily?</label>
+    <input type="checkbox" id="repeatAlarm" class="mb-4" />
+
+    <button
+      id="setAlarm"
+      class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded w-full max-w-xs"
+    >
+      Set Alarm
+    </button>
+    <button
+      id="stopAlarm"
+      class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded mt-2 hidden w-full max-w-xs"
+    >
+      Stop Alarm
+    </button>
+
+    <p id="countdown" class="mt-6 text-lg text-center"></p>
+
+    <audio
+      id="alarmSound"
+      src="https://www.soundjay.com/button/beep-07.wav"
+      preload="auto"
+    ></audio>
+
+    <script>
+      const alarmTimeInput = document.getElementById('alarmTime');
+      const voiceMessageInput = document.getElementById('voiceMessage');
+      const repeatAlarmCheckbox = document.getElementById('repeatAlarm');
+      const setAlarmBtn = document.getElementById('setAlarm');
+      const stopAlarmBtn = document.getElementById('stopAlarm');
+      const countdownDisplay = document.getElementById('countdown');
+      const alarmSound = document.getElementById('alarmSound');
+
+      let alarmTimeout;
+
+      function speak(message) {
+        const utterance = new SpeechSynthesisUtterance(message);
+        speechSynthesis.speak(utterance);
+      }
+
+      function updateCountdown(targetTime) {
+        const interval = setInterval(() => {
+          const now = new Date();
+          const timeLeft = targetTime - now;
+          if (timeLeft <= 0) {
+            clearInterval(interval);
+            countdownDisplay.textContent = "It's time!";
+          } else {
+            const minutes = Math.floor(timeLeft / 60000);
+            const seconds = Math.floor((timeLeft % 60000) / 1000);
+            countdownDisplay.textContent = `Time left: ${minutes}m ${seconds}s`;
+          }
+        }, 1000);
+      }
+
+      function scheduleAlarm(hours, minutes, message, repeat) {
+        const now = new Date();
+        const target = new Date();
+        target.setHours(hours);
+        target.setMinutes(minutes);
+        target.setSeconds(0);
+        if (target < now) target.setDate(target.getDate() + 1);
+
+        updateCountdown(target);
+
+        const delay = target.getTime() - now.getTime();
+        alarmTimeout = setTimeout(() => {
+          alarmSound.play();
+          speak(message);
+          stopAlarmBtn.classList.remove('hidden');
+
+          if (repeat) {
+            scheduleAlarm(hours, minutes, message, repeat);
+          }
+        }, delay);
+      }
+
+      setAlarmBtn.addEventListener('click', () => {
+        const alarmTime = alarmTimeInput.value;
+        if (!alarmTime) return alert('Please set a valid time.');
+
+        const [hours, minutes] = alarmTime.split(':').map(Number);
+        const message = voiceMessageInput.value;
+        const repeat = repeatAlarmCheckbox.checked;
+
+        clearTimeout(alarmTimeout);
+        scheduleAlarm(hours, minutes, message, repeat);
+
+        alert('Alarm set!');
+      });
+
+      stopAlarmBtn.addEventListener('click', () => {
+        alarmSound.pause();
+        alarmSound.currentTime = 0;
+        speechSynthesis.cancel();
+        stopAlarmBtn.classList.add('hidden');
+      });
+
+      // Register service worker for PWA support
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker
+            .register('service-worker.js')
+            .then((registration) => {
+              console.log('ServiceWorker registered:', registration);
+            })
+            .catch((error) => {
+              console.log('ServiceWorker registration failed:', error);
+            });
+        });
+      }
+    </script>
+  </body>
+</html>
