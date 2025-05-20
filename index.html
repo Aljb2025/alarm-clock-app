@@ -137,6 +137,21 @@
             });
         });
       }
+      
+      // Detect and warn for stricter browsers like Brave
+    window.addEventListener('load', () => {
+      const audio = document.createElement('audio');
+      audio.src = 'alarm-clock-01.mp3';
+      const canAutoPlay = audio.play().then(() => true).catch(() => false);
+
+      if (!('speechSynthesis' in window)) {
+        browserWarning.classList.remove('hidden');
+      } else {
+        canAutoPlay.then((result) => {
+          if (!result) browserWarning.classList.remove('hidden');
+        });
+      }
+    });
     </script>
   </body>
 </html>
